@@ -94,31 +94,33 @@ impl DiffOptions {
     }
 
     /// Produce a Patch between two texts based on the configured options
-    pub fn create_patch<'a>(&self, original: &'a str, modified: &'a str) -> Patch<'a, str> {
+    pub fn create_patch<'a>(&self, ori_filename: &'a str, ori_content: &'a str, mod_filename: &'a str, mod_content: &'a str) -> Patch<'a, str> {
         let mut classifier = Classifier::default();
-        let (old_lines, old_ids) = classifier.classify_lines(original);
-        let (new_lines, new_ids) = classifier.classify_lines(modified);
+        let (old_lines, old_ids) = classifier.classify_lines(ori_content);
+        let (new_lines, new_ids) = classifier.classify_lines(mod_content);
 
         let solution = self.diff_slice(&old_ids, &new_ids);
 
         let hunks = to_hunks(&old_lines, &new_lines, &solution, self.context_len);
-        Patch::new(Some("original"), Some("modified"), hunks)
+        Patch::new(Some(ori_filename), Some(mod_filename), hunks)
     }
 
     /// Create a patch between two potentially non-utf8 texts
     pub fn create_patch_bytes<'a>(
         &self,
-        original: &'a [u8],
-        modified: &'a [u8],
+        ori_filename: &'a [u8],
+        ori_content: &'a [u8],
+        mod_filename: &'a [u8],
+        mod_content: &'a [u8],
     ) -> Patch<'a, [u8]> {
         let mut classifier = Classifier::default();
-        let (old_lines, old_ids) = classifier.classify_lines(original);
-        let (new_lines, new_ids) = classifier.classify_lines(modified);
+        let (old_lines, old_ids) = classifier.classify_lines(ori_content);
+        let (new_lines, new_ids) = classifier.classify_lines(mod_content);
 
         let solution = self.diff_slice(&old_ids, &new_ids);
 
         let hunks = to_hunks(&old_lines, &new_lines, &solution, self.context_len);
-        Patch::new(Some(&b"original"[..]), Some(&b"modified"[..]), hunks)
+        Patch::new(Some(ori_filename), Some(mod_filename), hunks)
     }
 
     pub(crate) fn diff_slice<'a, T: PartialEq>(
@@ -178,16 +180,16 @@ fn diff<'a>(original: &'a str, modified: &'a str) -> Vec<Diff<'a, str>> {
 /// +Afraid of a doom brought by the Deepness.
 /// ";
 ///
-/// let patch = create_patch(original, modified);
+/// let patch = create_patch("original", original, "modified", modified);
 /// assert_eq!(patch.to_string(), expected);
 /// ```
-pub fn create_patch<'a>(original: &'a str, modified: &'a str) -> Patch<'a, str> {
-    DiffOptions::default().create_patch(original, modified)
+pub fn create_patch<'a>(ori_filename: &'a str, ori_content: &'a str, mod_filename: &'a str, mod_content: &'a str) -> Patch<'a, str> {
+    DiffOptions::default().create_patch(ori_filename, ori_content, mod_filename, mod_content)
 }
 
 /// Create a patch between two potentially non-utf8 texts
-pub fn create_patch_bytes<'a>(original: &'a [u8], modified: &'a [u8]) -> Patch<'a, [u8]> {
-    DiffOptions::default().create_patch_bytes(original, modified)
+pub fn create_patch_bytes<'a>(ori_filename: &'a [u8], ori_content: &'a [u8], mod_filename: &'a [u8], mod_content: &'a [u8]) -> Patch<'a, [u8]> {
+    DiffOptions::default().create_patch_bytes(ori_filename, ori_content, mod_filename, mod_content)
 }
 
 fn to_hunks<'a, T: ?Sized>(

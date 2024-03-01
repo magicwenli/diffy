@@ -6,6 +6,9 @@ use crate::{
     range::Range,
 };
 
+const ORI_NAME: &str = "original";
+const MOD_NAME: &str = "modified";
+
 // Helper macros are based off of the ones used in [dissimilar](https://docs.rs/dissimilar)
 macro_rules! diff_range_list {
     () => {
@@ -324,9 +327,9 @@ fn test_compact() {
 }
 
 macro_rules! assert_patch {
-    ($diff_options:expr, $old:ident, $new:ident, $expected:ident $(,)?) => {
-        let patch = $diff_options.create_patch($old, $new);
-        let bpatch = $diff_options.create_patch_bytes($old.as_bytes(), $new.as_bytes());
+    ($diff_options:expr, $old_fn:ident, $old:ident, $new_fn:ident, $new:ident, $expected:ident $(,)?) => {
+        let patch = $diff_options.create_patch($old_fn, $old,  $new_fn, $new);
+        let bpatch = $diff_options.create_patch_bytes($old_fn.as_bytes(), $old.as_bytes(), $new_fn.as_bytes(), $new.as_bytes());
         let patch_str = patch.to_string();
         let patch_bytes = bpatch.to_bytes();
         assert_eq!(patch_str, $expected);
@@ -342,8 +345,8 @@ macro_rules! assert_patch {
             $new.as_bytes()
         );
     };
-    ($old:ident, $new:ident, $expected:ident $(,)?) => {
-        assert_patch!(DiffOptions::default(), $old, $new, $expected);
+    ($old_fn:ident, $old:ident, $new_fn:ident, $new:ident, $expected:ident $(,)?) => {
+        assert_patch!(DiffOptions::default(), $old_fn, $old, $new_fn, $new, $expected);
     };
 }
 
@@ -366,7 +369,7 @@ fn diff_str() {
 +C
 ";
 
-    assert_patch!(a, b, expected);
+    assert_patch!(ORI_NAME, a, MOD_NAME, b, expected);
 }
 
 #[test]
@@ -424,7 +427,7 @@ The door of all subtleties!
 +The door of all subtleties!
 ";
 
-    assert_patch!(opts, lao, tzu, expected);
+    assert_patch!(opts, ORI_NAME, lao, MOD_NAME, tzu, expected);
 
     let expected = "\
 --- original
@@ -442,7 +445,7 @@ The door of all subtleties!
 +The door of all subtleties!
 ";
     opts.set_context_len(0);
-    assert_patch!(opts, lao, tzu, expected);
+    assert_patch!(opts, ORI_NAME, lao, MOD_NAME, tzu, expected);
 
     let expected = "\
 --- original
@@ -462,7 +465,32 @@ The door of all subtleties!
 +The door of all subtleties!
 ";
     opts.set_context_len(1);
-    assert_patch!(opts, lao, tzu, expected);
+    assert_patch!(opts, ORI_NAME, lao, MOD_NAME, tzu, expected);
+
+    let expected = "\
+--- old_fn
++++ new_fn
+@@ -1,7 +1,6 @@
+-The Way that can be told of is not the eternal Way;
+-The name that can be named is not the eternal name.
+ The Nameless is the origin of Heaven and Earth;
+-The Named is the mother of all things.
++The named is the mother of all things.
++
+ Therefore let there always be non-being,
+   so we may see their subtlety,
+ And let there always be being,
+@@ -9,3 +8,6 @@
+ The two are the same,
+ But after they are produced,
+   they have different names.
++They both may be called deep and profound.
++Deeper and more profound,
++The door of all subtleties!
+";
+    let old_fn = "old_fn";
+    let new_fn = "new_fn";
+    assert_patch!(old_fn, lao, new_fn, tzu, expected);
 }
 
 #[test]
@@ -478,7 +506,7 @@ fn no_newline_at_eof() {
 +new line
 \\ No newline at end of file
 ";
-    assert_patch!(old, new, expected);
+    assert_patch!(ORI_NAME, old, MOD_NAME, new, expected);
 
     let old = "old line\n";
     let new = "new line";
@@ -490,7 +518,7 @@ fn no_newline_at_eof() {
 +new line
 \\ No newline at end of file
 ";
-    assert_patch!(old, new, expected);
+    assert_patch!(ORI_NAME, old, MOD_NAME, new, expected);
 
     let old = "old line";
     let new = "new line\n";
@@ -502,7 +530,7 @@ fn no_newline_at_eof() {
 \\ No newline at end of file
 +new line
 ";
-    assert_patch!(old, new, expected);
+    assert_patch!(ORI_NAME, old, MOD_NAME, new, expected);
 
     let old = "old line\ncommon line";
     let new = "new line\ncommon line";
@@ -515,7 +543,7 @@ fn no_newline_at_eof() {
  common line
 \\ No newline at end of file
 ";
-    assert_patch!(old, new, expected);
+    assert_patch!(ORI_NAME, old, MOD_NAME, new, expected);
 }
 
 #[test]
@@ -609,7 +637,7 @@ void Chunk_copy(Chunk *src, size_t src_start, Chunk *dst, size_t dst_start, size
 -    return start <= chunk->length && n <= chunk->length - start;
 -}
 ";
-    assert_patch!(original, a, expected_diffy);
+    assert_patch!(ORI_NAME, original, MOD_NAME, a, expected_diffy);
 }
 
 // In the event that a patch has an invalid hunk range we want to ensure that when apply is
@@ -667,7 +695,7 @@ Second:
 
 #[test]
 fn reverse_empty_file() {
-    let p = create_patch("", "make it so");
+    let p = create_patch(ORI_NAME, "", MOD_NAME, "make it so");
     let reverse = p.reverse();
 
     let hunk_lines = p.hunks().iter().map(|h| h.lines());
@@ -700,7 +728,7 @@ Why, thank you Captain.  As are you.  A true warrior. Kupluh!
 Kupluh, Indeed
 ";
 
-    let p = create_patch(original, modified);
+    let p = create_patch(ORI_NAME, original, MOD_NAME, modified);
     let reverse = p.reverse();
 
     let re_reverse = apply(&apply(original, &p).unwrap(), &reverse).unwrap();

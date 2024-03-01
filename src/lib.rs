@@ -27,7 +27,7 @@
 //! let original = "The Way of Kings\nWords of Radiance\n";
 //! let modified = "The Way of Kings\nWords of Radiance\nOathbringer\n";
 //!
-//! let patch = create_patch(original, modified);
+//! let patch = create_patch("original", original, "modified", modified);
 //! #
 //! # let expected = "\
 //! # --- original
@@ -51,7 +51,7 @@
 //! # let original = "The Way of Kings\nWords of Radiance\n";
 //! # let modified = "The Way of Kings\nWords of Radiance\nOathbringer\n";
 //! #
-//! # let patch = create_patch(original, modified);
+//! # let patch = create_patch("original", original, "modified", modified);
 //! #
 //! # let expected = "\
 //! # --- original
